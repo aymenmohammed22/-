@@ -11,15 +11,41 @@ def download_video():
     if not video_url:
         return jsonify({'error': 'No URL provided'}), 400
 
+    # إعداد خيارات yt-dlp لتحليل الفيديو بدون تحميله
     ydl_opts = {
-        'format': 'best',
-        'outtmpl': 'C:/path/to/downloaded/video.%(ext)s'  # عدل المسار هنا حيث تريد حفظ الفيديو
+        'format': 'best',  # استخراج أفضل جودة متاحة
+        'noplaylist': True, # منع تحميل قوائم التشغيل
+        'skip_download': True # عدم تحميل الفيديو
     }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([video_url])
-        return jsonify({'message': 'Video downloaded successfully!'}), 200
+            # استخراج المعلومات الخاصة بالفيديو
+            info = ydl.extract_info(video_url, download=False)
+
+            # استخراج رابط التحميل
+            video_data = {
+                'title': info.get('title'),
+                'url': info.get('url'),
+                'ext': info.get('ext'),
+                'duration': info.get('duration'),
+                'thumbnail': info.get('thumbnail'),
+                'formats': []
+            }
+
+            # استخراج روابط التنزيل المختلفة
+            for format in info['formats']:
+                video_data['formats'].append({
+                    'format_id': format.get('format_id'),
+                    'format': format.get('format'),
+                    'url': format.get('url'),
+                    'resolution': format.get('resolution'),
+                    'filesize': format.get('filesize')
+                })
+
+        # إرسال المعلومات إلى التطبيق
+        return jsonify(video_data), 200
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
